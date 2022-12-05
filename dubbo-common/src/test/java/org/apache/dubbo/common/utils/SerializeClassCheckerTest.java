@@ -16,12 +16,14 @@
  */
 package org.apache.dubbo.common.utils;
 
+import org.apache.dubbo.common.config.SystemConfiguration;
 import org.apache.dubbo.common.constants.CommonConstants;
 
 import javassist.compiler.Javac;
+import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.net.Socket;
@@ -29,7 +31,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
-public class SerializeClassCheckerTest {
+class SerializeClassCheckerTest {
 
     @BeforeEach
     public void setUp() {
@@ -42,7 +44,7 @@ public class SerializeClassCheckerTest {
     }
 
     @Test
-    public void testCommon() {
+    void testCommon() {
         SerializeClassChecker serializeClassChecker = SerializeClassChecker.getInstance();
 
         for (int i = 0; i < 10; i++) {
@@ -57,14 +59,16 @@ public class SerializeClassCheckerTest {
             serializeClassChecker.validateClass(int.class.getName().toUpperCase(Locale.ROOT));
         }
 
-        Assertions.assertThrows(IllegalArgumentException.class, ()-> {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
             serializeClassChecker.validateClass(Socket.class.getName());
         });
     }
 
     @Test
-    public void testAddAllow() {
-        System.setProperty(CommonConstants.CLASS_DESERIALIZE_ALLOWED_LIST, Socket.class.getName() + "," + Javac.class.getName());
+    void testAddAllow() {
+        SystemConfiguration systemConfiguration = ApplicationModel.defaultModel().getModelEnvironment().getSystemConfiguration();
+
+        systemConfiguration.overwriteCache(CommonConstants.CLASS_DESERIALIZE_ALLOWED_LIST, Socket.class.getName() + "," + Javac.class.getName());
 
         SerializeClassChecker serializeClassChecker = SerializeClassChecker.getInstance();
         for (int i = 0; i < 10; i++) {
@@ -72,40 +76,44 @@ public class SerializeClassCheckerTest {
             serializeClassChecker.validateClass(Javac.class.getName());
         }
 
-        System.clearProperty(CommonConstants.CLASS_DESERIALIZE_ALLOWED_LIST);
+        systemConfiguration.clearCache();
+
     }
 
     @Test
-    public void testAddBlock() {
-        System.setProperty(CommonConstants.CLASS_DESERIALIZE_BLOCKED_LIST, LinkedList.class.getName() + "," + Integer.class.getName());
+    void testAddBlock() {
+        SystemConfiguration systemConfiguration = ApplicationModel.defaultModel().getModelEnvironment().getSystemConfiguration();
+        systemConfiguration.overwriteCache(CommonConstants.CLASS_DESERIALIZE_BLOCKED_LIST, LinkedList.class.getName() + "," + Integer.class.getName());
 
         SerializeClassChecker serializeClassChecker = SerializeClassChecker.getInstance();
         for (int i = 0; i < 10; i++) {
-            Assertions.assertThrows(IllegalArgumentException.class, ()-> {
+            Assertions.assertThrows(IllegalArgumentException.class, () -> {
                 serializeClassChecker.validateClass(LinkedList.class.getName());
             });
-            Assertions.assertThrows(IllegalArgumentException.class, ()-> {
+            Assertions.assertThrows(IllegalArgumentException.class, () -> {
                 serializeClassChecker.validateClass(Integer.class.getName());
             });
         }
 
-        System.clearProperty(CommonConstants.CLASS_DESERIALIZE_BLOCKED_LIST);
+        systemConfiguration.clearCache();
+
     }
 
     @Test
-    public void testBlockAll() {
-        System.setProperty(CommonConstants.CLASS_DESERIALIZE_BLOCK_ALL, "true");
-        System.setProperty(CommonConstants.CLASS_DESERIALIZE_ALLOWED_LIST, LinkedList.class.getName());
+    void testBlockAll() {
+        SystemConfiguration systemConfiguration = ApplicationModel.defaultModel().getModelEnvironment().getSystemConfiguration();
+
+        systemConfiguration.overwriteCache(CommonConstants.CLASS_DESERIALIZE_BLOCK_ALL, "true");
+        systemConfiguration.overwriteCache(CommonConstants.CLASS_DESERIALIZE_ALLOWED_LIST, LinkedList.class.getName());
 
         SerializeClassChecker serializeClassChecker = SerializeClassChecker.getInstance();
         for (int i = 0; i < 10; i++) {
             serializeClassChecker.validateClass(LinkedList.class.getName());
-            Assertions.assertThrows(IllegalArgumentException.class, ()-> {
+            Assertions.assertThrows(IllegalArgumentException.class, () -> {
                 serializeClassChecker.validateClass(Integer.class.getName());
             });
         }
 
-        System.clearProperty(CommonConstants.CLASS_DESERIALIZE_BLOCK_ALL);
-        System.clearProperty(CommonConstants.CLASS_DESERIALIZE_ALLOWED_LIST);
+        systemConfiguration.clearCache();
     }
 }
